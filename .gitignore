@@ -1,0 +1,13 @@
+*.out
+slurm/
+*.pyc
+*.png
+!assets/*.png
+*.mtl
+*.obj
+*.ply
+*.pth
+**/build/**
+*.so
+wandb**
+logs

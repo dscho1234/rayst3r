@@ -1,0 +1,9 @@
+__init__.py
+curope.cpp
+curope2d.py
+kernels.cu
+setup.py
+curope.egg-info/PKG-INFO
+curope.egg-info/SOURCES.txt
+curope.egg-info/dependency_links.txt
+curope.egg-info/top_level.txt
