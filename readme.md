@@ -1,7 +1,5 @@
-<div align="center", documentation will follow later.
-
 # RaySt3R: Predicting Novel Depth Maps for Zero-Shot Object Completion
-
+<div align="center", documentation will follow later.
 <a href="https://arxiv.org/abs/2506.05285"><img src='https://img.shields.io/badge/arXiv-Paper-red?logo=arxiv&logoColor=white' alt='arXiv'></a>
 <a href='https://rayst3r.github.io'><img src='https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white' alt='Project Page'></a>
 
