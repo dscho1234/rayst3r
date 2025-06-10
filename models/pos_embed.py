@@ -104,8 +104,9 @@ try:
     from extensions.curope import cuRoPE2D
     RoPE2D = cuRoPE2D
 except ImportError:
-    print('Warning, cannot find cuda-compiled version of RoPE2D, using a slow pytorch version instead')
-
+    # critical error, we need to use the slow pytorch version
+    raise ImportError("CUDA-compiled version of RoPE2D is required but could not be found. Please compile the CUDA extension before running.")
+    
     class RoPE2D(torch.nn.Module):
         
         def __init__(self, freq=100.0, F0=1.0):
@@ -135,7 +136,7 @@ except ImportError:
             cos = torch.nn.functional.embedding(pos1d, cos)[:, None, :, :]
             sin = torch.nn.functional.embedding(pos1d, sin)[:, None, :, :]
             return (tokens * cos) + (self.rotate_half(tokens) * sin)
-            
+        
         def forward(self, tokens, positions):
             """
             input:
@@ -144,6 +145,8 @@ except ImportError:
             output:
                 * tokens after appplying RoPE2D (batch_size x nheads x ntokens x dim)
             """
+            tokens = tokens.to(torch.float32)
+            #positions = positions.to(torch.float32)
             assert tokens.size(3)%2==0, "number of dimensions should be a multiple of two"
             D = tokens.size(3) // 2
             assert positions.ndim==3 and positions.shape[-1] == 2 # Batch, Seq, 2
