@@ -3,7 +3,7 @@ numpy
 open3d
 Pillow
 pyrender
-rerun
+rerun-sdk==0.21.0
 setuptools
 tqdm
 trimesh

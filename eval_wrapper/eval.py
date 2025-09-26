@@ -6,6 +6,8 @@ from torchvision import transforms
 import os
 import sys
 import open3d as o3d
+import time
+import copy
 current_dir = os.getcwd()
 sys.path.append(current_dir)
 
@@ -321,16 +323,27 @@ def compute_all_points(pred_dict,batch):
 def eval_scene(model, data_dir,visualize=False,rr_addr=None,run_octmae=False,set_conf=5,
                no_input_mask=False,no_pred_mask=False,no_filter_input_view=False,false_positive=None,false_negative=None,n_pred_views=5,
                do_filter_all_masks=False, dino_model=None,tsdf=False):
+    # dscho debug
+    n_iter = 10
+
+    # Initialize timing dictionary
+    timing_info = {}
+    total_start_time = time.time()
     
     if dino_model is None:
         # Loading DINOv2 model
+        dino_load_start = time.time()
         dino_model = torch.hub.load('facebookresearch/dinov2', "dinov2_vitl14_reg")
         dino_model.eval()
         dino_model.to("cuda")
+        timing_info['dino_model_loading'] = time.time() - dino_load_start
 
+    # Data loading timing
+    data_load_start = time.time()
     dataloader_input_view = GenericLoaderSmall(data_dir,n_pred_views=1,pred_input_only=True,false_positive=false_positive,false_negative=false_negative)
     input_view_loader = DataLoader(dataloader_input_view, batch_size=1, shuffle=True, collate_fn=collate)
     input_view_batch = next(iter(input_view_loader))
+    timing_info['input_view_data_loading'] = time.time() - data_load_start
 
     postprocessor_input_view = PostProcessWrapper(mode='input_view',set_conf=set_conf,
                                                   no_input_mask=no_input_mask,no_pred_mask=no_pred_mask)
@@ -338,29 +351,52 @@ def eval_scene(model, data_dir,visualize=False,rr_addr=None,run_octmae=False,set
                                                   no_input_mask=no_input_mask,no_pred_mask=no_pred_mask)
     fused_meshes = None
     with torch.no_grad():
-        pred_input_view, gt_input_view, _, scale_factor = model(input_view_batch,dino_model)
-        if no_filter_input_view:
-            pred_input_view['pointmaps'] = input_view_batch['input_cams']['pointmaps']
-            pred_input_view['depths'] = input_view_batch['input_cams']['depths']
-        else: 
-            pred_input_view, input_view_batch = postprocessor_input_view(pred_input_view,input_view_batch)
+        # Input view inference timing
+        input_inference_start = time.time()
+        for i in range(n_iter):
+            pred_input_view, gt_input_view, _, scale_factor = model(input_view_batch,dino_model)
+        timing_info['input_view_inference'] = (time.time() - input_inference_start)/n_iter
+        # Input view postprocessing timing
+        input_postprocess_start = time.time()
+        for i in range(n_iter):
+            if no_filter_input_view:
+                pred_input_view['pointmaps'] = input_view_batch['input_cams']['pointmaps']
+                pred_input_view['depths'] = input_view_batch['input_cams']['depths']
+            else: 
+                pred_input_view, input_view_batch = postprocessor_input_view(pred_input_view,input_view_batch)
+        timing_info['input_view_postprocessing'] = (time.time() - input_postprocess_start)/n_iter
 
         input_points = pred_input_view['pointmaps'][0][0][input_view_batch['new_cams']['valid_masks'][0][0]] * (1.0/scale_factor)
         if input_points.shape[0] == 0:
             input_points = None
         
-        dataloader_pred_views = GenericLoaderSmall(data_dir,n_pred_views=n_pred_views,pred_input_only=False,
-        pointmap_for_bb=input_points,run_octmae=run_octmae)
-        pred_views_loader = DataLoader(dataloader_pred_views, batch_size=1, shuffle=True, collate_fn=collate)
-        pred_views_batch = next(iter(pred_views_loader))
+        # Prediction views data loading timing
+        pred_data_load_start = time.time()
+        for i in range(n_iter):
+            dataloader_pred_views = GenericLoaderSmall(data_dir,n_pred_views=n_pred_views,pred_input_only=False,
+            pointmap_for_bb=input_points,run_octmae=run_octmae)
+            pred_views_loader = DataLoader(dataloader_pred_views, batch_size=1, shuffle=True, collate_fn=collate)
+            pred_views_batch = next(iter(pred_views_loader))
+        timing_info['pred_views_data_loading'] = (time.time() - pred_data_load_start)/n_iter
 
         # this is for the mask ablation
         if (false_positive is not None or false_negative is not None) and input_points is not None:
             pred_views_batch['input_cams']['valid_masks'] = input_view_batch['input_cams']['valid_masks']
 
-        pred_new_views, gt_new_views, _, scale_factor = model(pred_views_batch,dino_model)
-        pred_new_views, pred_views_batch = postprocessor_pred_views(pred_new_views,pred_views_batch)
+        # Prediction views inference timing
+        pred_inference_start = time.time()
+        for i in range(n_iter):
+            pred_new_views, gt_new_views, _, scale_factor = model(pred_views_batch,dino_model)
+        timing_info['pred_views_inference'] = (time.time() - pred_inference_start)/n_iter
+        
+        # Prediction views postprocessing timing
+        pred_postprocess_start = time.time()
+        for i in range(n_iter):
+            pred_new_views, pred_views_batch = postprocessor_pred_views(pred_new_views,pred_views_batch)
+        timing_info['pred_views_postprocessing'] = (time.time() - pred_postprocess_start)/n_iter
     
+    # Final processing timing
+    final_process_start = time.time()
     pred = merge_dicts(dict_to_float(pred_input_view),dict_to_float(pred_new_views))
     gt = merge_dicts(dict_to_float(gt_input_view),dict_to_float(gt_new_views))
 
@@ -388,6 +424,20 @@ def eval_scene(model, data_dir,visualize=False,rr_addr=None,run_octmae=False,set
     
     if visualize:
         just_load_viz(pred, gt, batch, addr=rr_addr,fused_meshes=fused_meshes)
+    
+    timing_info['final_processing'] = time.time() - final_process_start
+    timing_info['total_time'] = time.time() - total_start_time
+    
+    # Print timing summary
+    print("\n" + "="*50)
+    print("INFERENCE TIMING SUMMARY")
+    print("="*50)
+    for key, value in timing_info.items():
+        print(f"{key.replace('_', ' ').title()}: {value:.4f} seconds")
+    print("="*50)
+    print(f"Total Inference Time: {timing_info['total_time']:.4f} seconds")
+    print("="*50 + "\n")
+    
     return all_points
 
 
