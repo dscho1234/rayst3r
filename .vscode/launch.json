@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug eval_wrapper/eval.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_wrapper/eval.py",
+            "console": "integratedTerminal",
+            "args": [
+                
+                "example_scene/"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Debug eval_custom.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_custom.py",
+            "console": "integratedTerminal",
+            "args": [
+                
+                "/home/dscho1234/fast_storage/dscho/im2flow2act/data/realworld_human_demonstration_custom/test_cup_movement_depth_fix",
+                "--tsdf_voxel_size", "0.005",
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }
+
+    ]
+}

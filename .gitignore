@@ -12,3 +12,4 @@ slurm/
 *.so
 wandb**
 logs
+custom_eval_output/

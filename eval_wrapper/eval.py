@@ -8,9 +8,6 @@ import sys
 import open3d as o3d
 import time
 import copy
-current_dir = os.getcwd()
-sys.path.append(current_dir)
-
 from eval_wrapper.sample_poses import pointmap_to_poses
 from utils.fusion import fuse_batch
 from models.rayquery import *

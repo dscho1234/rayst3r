@@ -82,10 +82,11 @@ def compute_dino_and_store_features(dino_model : torch.nn.Module, rgb: torch.Ten
     return dino_feat
 
 
-def prepare_fast_batch(batch,dino_model = None,dino_layers = None):
+def prepare_fast_batch(batch,dino_model = None,dino_layers = None, convert_depth_to_metric = True):
     # depth to metric    
-    batch['new_cams']['depths'] = depth_to_metric(batch['new_cams']['depths'])
-    batch['input_cams']['depths'] = depth_to_metric(batch['input_cams']['depths'])
+    if convert_depth_to_metric:
+        batch['new_cams']['depths'] = depth_to_metric(batch['new_cams']['depths'])
+        batch['input_cams']['depths'] = depth_to_metric(batch['input_cams']['depths'])
 
     # compute pointmaps
     batch['new_cams']['pointmaps'] = compute_pointmaps(batch['new_cams']['depths'],batch['new_cams']['Ks'],batch['new_cams']['c2ws'])

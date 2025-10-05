@@ -19,7 +19,7 @@ def batch_to_device(batch,device='cuda'):
             batch[key] = batch_to_device(batch[key],device)
     return batch
 
-def eval_model(model,batch,mode='loss',device='cuda',dino_model=None,args=None,augmentor=None,return_scale=False):
+def eval_model(model,batch,mode='loss',device='cuda',dino_model=None,args=None,augmentor=None,return_scale=False,convert_depth_to_metric=True):
     batch = batch_to_device(batch,device)
     # check if model is distributed
     if isinstance(model,torch.nn.parallel.DistributedDataParallel):
@@ -27,7 +27,7 @@ def eval_model(model,batch,mode='loss',device='cuda',dino_model=None,args=None,a
     else:
         dino_layers = model.dino_layers
     if 'pointmaps' not in list(batch['input_cams'].keys()):
-        batch = prepare_fast_batch(batch,dino_model,dino_layers)
+        batch = prepare_fast_batch(batch,dino_model,dino_layers, convert_depth_to_metric=convert_depth_to_metric)
 
     normalize_mode = args.normalize_mode if args is not None else 'median'
     batch, scale_factors = normalize_batch(batch,normalize_mode)
